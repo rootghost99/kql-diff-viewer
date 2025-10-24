@@ -92,38 +92,21 @@ export default function KQLDiffViewer() {
     setAiAnalysis('');
     
     try {
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
+      const workerUrl = 'https://kql-analyzer.derek-macdonald.workers.dev';
+      
+      const response = await fetch(workerUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 2000,
-          messages: [
-            {
-              role: "user",
-              content: `You are a Microsoft Sentinel security analyst reviewing changes to a KQL analytic rule. Analyze the differences between the original and updated queries and provide a clear, concise summary.
-
-ORIGINAL QUERY:
-${originalQuery}
-
-UPDATED QUERY:
-${updatedQuery}
-
-Provide a summary that includes:
-1. A brief overview of what changed
-2. The security impact or purpose of the changes
-3. Any potential issues or improvements
-
-Keep the response professional and focused on operational impact for an MSSP team.`
-            }
-          ]
+          originalQuery,
+          updatedQuery
         })
       });
 
       if (!response.ok) {
-        throw new Error(`API request failed: ${response.status}`);
+        throw new Error(`Worker request failed: ${response.status}`);
       }
 
       const data = await response.json();
@@ -170,7 +153,7 @@ Keep the response professional and focused on operational impact for an MSSP tea
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">KQL Query Diff Viewer</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">ThreatDefender - KQL Diff App</h1>
           <p className="text-gray-600">Compare Sentinel Analytic Rule changes</p>
         </div>
 
