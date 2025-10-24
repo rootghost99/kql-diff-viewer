@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 
 export default function KQLDiffViewer() {
   const [originalQuery, setOriginalQuery] = useState('');
   const [updatedQuery, setUpdatedQuery] = useState('');
   const [showDiff, setShowDiff] = useState(false);
-  const [aiAnalysis, setAiAnalysis] = useState('');
+  const [aiAnalysis, setAiAnalysis] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   // Character-level diff for modified lines
@@ -87,9 +88,80 @@ export default function KQLDiffViewer() {
     return diff;
   };
 
+  // Parse AI response into structured sections
+  const parseAIResponse = (text) => {
+    const sections = [];
+    const lines = text.split('\n');
+    let currentSection = null;
+    
+    for (const line of lines) {
+      // Detect section headers
+      if (line.match(/^#{1,3}\s+(.+)/)) {
+        if (currentSection) sections.push(currentSection);
+        const title = line.replace(/^#{1,3}\s+/, '').trim();
+        const type = detectSectionType(title);
+        currentSection = { title, content: '', type };
+      } else if (line.match(/^\d+\.\s+(.+)/) || line.match(/^[-*]\s+(.+)/)) {
+        // Numbered or bullet list item
+        if (!currentSection) {
+          currentSection = { title: 'Overview', content: '', type: 'info' };
+        }
+        currentSection.content += line + '\n';
+      } else if (line.trim()) {
+        if (!currentSection) {
+          currentSection = { title: 'Overview', content: '', type: 'info' };
+        }
+        currentSection.content += line + '\n';
+      }
+    }
+    
+    if (currentSection) sections.push(currentSection);
+    return sections.length > 0 ? sections : [{ title: 'Analysis', content: text, type: 'info' }];
+  };
+
+  const detectSectionType = (title) => {
+    const lower = title.toLowerCase();
+    if (lower.includes('issue') || lower.includes('risk') || lower.includes('concern') || lower.includes('problem')) {
+      return 'warning';
+    }
+    if (lower.includes('improvement') || lower.includes('benefit') || lower.includes('positive') || lower.includes('enhancement')) {
+      return 'success';
+    }
+    if (lower.includes('impact') || lower.includes('change') || lower.includes('overview')) {
+      return 'info';
+    }
+    return 'neutral';
+  };
+
+  const getSectionStyle = (type) => {
+    switch (type) {
+      case 'warning':
+        return 'bg-yellow-50 border-yellow-300 border-l-4';
+      case 'success':
+        return 'bg-green-50 border-green-300 border-l-4';
+      case 'info':
+        return 'bg-blue-50 border-blue-300 border-l-4';
+      default:
+        return 'bg-gray-50 border-gray-300 border-l-4';
+    }
+  };
+
+  const getSectionIcon = (type) => {
+    switch (type) {
+      case 'warning':
+        return '⚠️';
+      case 'success':
+        return '✅';
+      case 'info':
+        return 'ℹ️';
+      default:
+        return '📝';
+    }
+  };
+
   const generateAIAnalysis = async () => {
     setIsAnalyzing(true);
-    setAiAnalysis('');
+    setAiAnalysis(null);
     
     try {
       const workerUrl = 'https://kql-analyzer.derek-macdonald.workers.dev';
@@ -111,10 +183,11 @@ export default function KQLDiffViewer() {
 
       const data = await response.json();
       const analysis = data.content[0].text;
-      setAiAnalysis(analysis);
+      const parsedSections = parseAIResponse(analysis);
+      setAiAnalysis(parsedSections);
     } catch (error) {
       console.error("Error generating AI analysis:", error);
-      setAiAnalysis("Failed to generate analysis. Please try again.");
+      setAiAnalysis([{ title: 'Error', content: 'Failed to generate analysis. Please try again.', type: 'warning' }]);
     } finally {
       setIsAnalyzing(false);
     }
@@ -123,7 +196,7 @@ export default function KQLDiffViewer() {
   const handleCompare = () => {
     if (originalQuery.trim() && updatedQuery.trim()) {
       setShowDiff(true);
-      setAiAnalysis('');
+      setAiAnalysis(null);
     }
   };
 
@@ -131,7 +204,7 @@ export default function KQLDiffViewer() {
     setOriginalQuery('');
     setUpdatedQuery('');
     setShowDiff(false);
-    setAiAnalysis('');
+    setAiAnalysis(null);
   };
 
   const diff = showDiff ? computeDiff(originalQuery, updatedQuery) : [];
@@ -186,9 +259,19 @@ export default function KQLDiffViewer() {
         ) : (
           <>
             {aiAnalysis && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
-                <h3 className="text-lg font-semibold text-blue-900 mb-3">AI Analysis</h3>
-                <div className="text-gray-800 whitespace-pre-wrap">{aiAnalysis}</div>
+              <div className="mb-6 space-y-4">
+                <h2 className="text-2xl font-bold text-gray-900">AI Analysis</h2>
+                {aiAnalysis.map((section, idx) => (
+                  <div key={idx} className={`rounded-lg p-6 ${getSectionStyle(section.type)}`}>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                      <span>{getSectionIcon(section.type)}</span>
+                      {section.title}
+                    </h3>
+                    <div className="prose prose-sm max-w-none text-gray-800">
+                      <ReactMarkdown>{section.content}</ReactMarkdown>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
 
