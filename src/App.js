@@ -116,7 +116,7 @@ export default function KQLDiffViewer() {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">KQL Query Diff Viewer</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">ThreatDefender - KQL Diff App</h1>
           <p className="text-gray-600">Compare Sentinel Analytic Rule changes</p>
         </div>
 
