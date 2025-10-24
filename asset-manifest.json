@@ -1,13 +1,13 @@
 {
   "files": {
-    "main.css": "/kql-diff-viewer/static/css/main.7bc33393.css",
-    "main.js": "/kql-diff-viewer/static/js/main.9bdfaae2.js",
+    "main.css": "/kql-diff-viewer/static/css/main.27b29119.css",
+    "main.js": "/kql-diff-viewer/static/js/main.d2333c34.js",
     "index.html": "/kql-diff-viewer/index.html",
-    "main.7bc33393.css.map": "/kql-diff-viewer/static/css/main.7bc33393.css.map",
-    "main.9bdfaae2.js.map": "/kql-diff-viewer/static/js/main.9bdfaae2.js.map"
+    "main.27b29119.css.map": "/kql-diff-viewer/static/css/main.27b29119.css.map",
+    "main.d2333c34.js.map": "/kql-diff-viewer/static/js/main.d2333c34.js.map"
   },
   "entrypoints": [
-    "static/css/main.7bc33393.css",
-    "static/js/main.9bdfaae2.js"
+    "static/css/main.27b29119.css",
+    "static/js/main.d2333c34.js"
   ]
 }
