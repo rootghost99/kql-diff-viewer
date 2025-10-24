@@ -59,10 +59,6 @@ npm start
 npm run build
 ```
 
-## Contributing
-
-Built and maintained by Derek MacDonald for the ThreatHunter MSSP team at eGroup Enabling Technologies.
-
 ## License
 
 MIT
