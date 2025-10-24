@@ -8,6 +8,70 @@ export default function KQLDiffViewer() {
   const [aiAnalysis, setAiAnalysis] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const [syntaxErrors, setSyntaxErrors] = useState({ original: [], updated: [] });
+  const [fpAnalysis, setFpAnalysis] = useState(null);
+  const [isFpAnalyzing, setIsFpAnalyzing] = useState(false);
+
+  // KQL Syntax Validator
+  const validateKQLSyntax = (query) => {
+    const errors = [];
+    const lines = query.split('\n');
+    
+    // Check for common syntax issues
+    lines.forEach((line, idx) => {
+      const lineNum = idx + 1;
+      const trimmed = line.trim();
+      
+      // Skip empty lines and comments
+      if (!trimmed || trimmed.startsWith('//')) return;
+      
+      // Check for unmatched parentheses
+      const openParens = (line.match(/\(/g) || []).length;
+      const closeParens = (line.match(/\)/g) || []).length;
+      if (openParens !== closeParens) {
+        errors.push({ line: lineNum, message: 'Unmatched parentheses', severity: 'error' });
+      }
+      
+      // Check for missing pipe before operators
+      if (trimmed.match(/^(where|project|extend|summarize|join|union|order|top|take|limit)/i) && idx > 0) {
+        const prevLine = lines[idx - 1].trim();
+        if (prevLine && !prevLine.endsWith('|') && !prevLine.startsWith('//')) {
+          errors.push({ line: lineNum, message: 'Missing pipe (|) before operator', severity: 'error' });
+        }
+      }
+      
+      // Check for common typos
+      if (trimmed.match(/\bwheer\b|\bprojetc\b|\bsummariz\b/i)) {
+        errors.push({ line: lineNum, message: 'Possible typo in operator', severity: 'warning' });
+      }
+      
+      // Check for ago() without time unit
+      if (trimmed.match(/ago\(\s*\d+\s*\)/)) {
+        errors.push({ line: lineNum, message: 'ago() missing time unit (d, h, m, s)', severity: 'error' });
+      }
+      
+      // Check for unquoted strings after ==
+      if (trimmed.match(/==\s*[a-zA-Z][a-zA-Z0-9]*\s*($|[^\w])/)) {
+        errors.push({ line: lineNum, message: 'String values should be quoted', severity: 'warning' });
+      }
+      
+      // Check for expensive operations
+      if (trimmed.match(/\bjoin\b|\bunion\b/i)) {
+        errors.push({ line: lineNum, message: 'Expensive operation detected (join/union)', severity: 'info' });
+      }
+    });
+    
+    // Check overall structure
+    if (!query.trim()) {
+      errors.push({ line: 0, message: 'Query is empty', severity: 'error' });
+    }
+    
+    if (!query.match(/^\w+/)) {
+      errors.push({ line: 1, message: 'Query should start with a table name', severity: 'warning' });
+    }
+    
+    return errors;
+  };
 
   // Character-level diff for modified lines
   const getCharDiff = (str1, str2) => {
@@ -203,10 +267,199 @@ export default function KQLDiffViewer() {
     }
   };
 
+  const generateFPAnalysis = async () => {
+    setIsFpAnalyzing(true);
+    setFpAnalysis(null);
+    
+    try {
+      const workerUrl = 'https://kql-analyzer.derek-macdonald.workers.dev';
+      
+      const response = await fetch(workerUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          originalQuery,
+          updatedQuery
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Worker request failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      // Second call for FP analysis
+      const fpResponse = await fetch(workerUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          originalQuery: `Analyze this KQL query change for false positive risk:\n\nORIGINAL:\n${originalQuery}\n\nUPDATED:\n${updatedQuery}\n\nProvide:\n1. False Positive Risk Level (Low/Medium/High)\n2. Specific conditions that might trigger false positives\n3. Recommendations to reduce false positives\n4. Test cases to validate the changes`,
+          updatedQuery: "Analysis request"
+        })
+      });
+
+      const fpData = await fpResponse.json();
+      const fpText = fpData.content[0].text;
+      setFpAnalysis(fpText);
+    } catch (error) {
+      console.error("Error generating FP analysis:", error);
+      setFpAnalysis("Failed to generate false positive analysis. Please try again.");
+    } finally {
+      setIsFpAnalyzing(false);
+    }
+  };
+
+  const exportReport = () => {
+    const diffSummary = diff.reduce((acc, line) => {
+      if (line.type === 'added') acc.added++;
+      if (line.type === 'removed') acc.removed++;
+      if (line.type === 'modified') acc.modified++;
+      return acc;
+    }, { added: 0, removed: 0, modified: 0 });
+
+    let reportContent = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>KQL Query Comparison Report</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 1200px; margin: 40px auto; padding: 20px; }
+    h1 { color: #1e40af; border-bottom: 3px solid #1e40af; padding-bottom: 10px; }
+    h2 { color: #374151; margin-top: 30px; }
+    .metadata { background: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0; }
+    .summary { display: flex; gap: 20px; margin: 20px 0; }
+    .summary-item { background: white; border: 2px solid #e5e7eb; padding: 15px; border-radius: 8px; flex: 1; text-align: center; }
+    .summary-item.added { border-color: #10b981; }
+    .summary-item.removed { border-color: #ef4444; }
+    .summary-item.modified { border-color: #f59e0b; }
+    .query-section { margin: 20px 0; }
+    .query-box { background: #1f2937; color: #f9fafb; padding: 20px; border-radius: 8px; overflow-x: auto; }
+    pre { margin: 0; white-space: pre-wrap; word-wrap: break-word; font-family: 'Courier New', monospace; }
+    .analysis-section { background: #eff6ff; border-left: 4px solid #3b82f6; padding: 20px; margin: 20px 0; border-radius: 4px; }
+    .fp-section { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 20px; margin: 20px 0; border-radius: 4px; }
+    .error-section { background: #fee2e2; border-left: 4px solid #ef4444; padding: 15px; margin: 15px 0; border-radius: 4px; }
+    .error-list { margin: 10px 0; }
+    .error-item { margin: 5px 0; padding: 5px; background: white; border-radius: 4px; }
+    .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; color: #6b7280; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <h1>🛡️ ThreatDefender - KQL Query Comparison Report</h1>
+  
+  <div class="metadata">
+    <p><strong>Report Generated:</strong> ${new Date().toLocaleString()}</p>
+    <p><strong>Analyst:</strong> ${navigator.userAgent.includes('Windows') ? 'ThreatHunter Team' : 'Security Analyst'}</p>
+  </div>
+
+  <h2>Change Summary</h2>
+  <div class="summary">
+    <div class="summary-item added">
+      <h3 style="margin: 0; color: #10b981;">${diffSummary.added}</h3>
+      <p style="margin: 5px 0 0 0;">Lines Added</p>
+    </div>
+    <div class="summary-item removed">
+      <h3 style="margin: 0; color: #ef4444;">${diffSummary.removed}</h3>
+      <p style="margin: 5px 0 0 0;">Lines Removed</p>
+    </div>
+    <div class="summary-item modified">
+      <h3 style="margin: 0; color: #f59e0b;">${diffSummary.modified}</h3>
+      <p style="margin: 5px 0 0 0;">Lines Modified</p>
+    </div>
+  </div>`;
+
+    // Add syntax validation results
+    if (syntaxErrors.original.length > 0 || syntaxErrors.updated.length > 0) {
+      reportContent += `<h2>Syntax Validation</h2>`;
+      
+      if (syntaxErrors.original.length > 0) {
+        reportContent += `<div class="error-section">
+          <h3>Original Query Issues (${syntaxErrors.original.length})</h3>
+          <div class="error-list">`;
+        syntaxErrors.original.forEach(err => {
+          reportContent += `<div class="error-item">Line ${err.line}: ${err.message} [${err.severity}]</div>`;
+        });
+        reportContent += `</div></div>`;
+      }
+      
+      if (syntaxErrors.updated.length > 0) {
+        reportContent += `<div class="error-section">
+          <h3>Updated Query Issues (${syntaxErrors.updated.length})</h3>
+          <div class="error-list">`;
+        syntaxErrors.updated.forEach(err => {
+          reportContent += `<div class="error-item">Line ${err.line}: ${err.message} [${err.severity}]</div>`;
+        });
+        reportContent += `</div></div>`;
+      }
+    }
+
+    // Add AI Analysis
+    if (aiAnalysis) {
+      reportContent += `<h2>AI Analysis</h2>`;
+      aiAnalysis.forEach(section => {
+        reportContent += `<div class="analysis-section">
+          <h3>${section.title}</h3>
+          <div>${section.content.replace(/\n/g, '<br>')}</div>
+        </div>`;
+      });
+    }
+
+    // Add FP Analysis
+    if (fpAnalysis) {
+      reportContent += `<h2>False Positive Analysis</h2>
+      <div class="fp-section">
+        <div>${fpAnalysis.replace(/\n/g, '<br>')}</div>
+      </div>`;
+    }
+
+    // Add queries
+    reportContent += `
+  <h2>Original Query</h2>
+  <div class="query-section">
+    <div class="query-box">
+      <pre>${originalQuery}</pre>
+    </div>
+  </div>
+
+  <h2>Updated Query</h2>
+  <div class="query-section">
+    <div class="query-box">
+      <pre>${updatedQuery}</pre>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>Generated by ThreatDefender KQL Diff App | eGroup Enabling Technologies</p>
+  </div>
+</body>
+</html>`;
+
+    // Create and download
+    const blob = new Blob([reportContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `kql-comparison-report-${Date.now()}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const handleCompare = () => {
     if (originalQuery.trim() && updatedQuery.trim()) {
+      // Run syntax validation
+      const originalErrors = validateKQLSyntax(originalQuery);
+      const updatedErrors = validateKQLSyntax(updatedQuery);
+      setSyntaxErrors({ original: originalErrors, updated: updatedErrors });
+      
       setShowDiff(true);
       setAiAnalysis(null);
+      setFpAnalysis(null);
     }
   };
 
@@ -215,6 +468,8 @@ export default function KQLDiffViewer() {
     setUpdatedQuery('');
     setShowDiff(false);
     setAiAnalysis(null);
+    setFpAnalysis(null);
+    setSyntaxErrors({ original: [], updated: [] });
   };
 
   const diff = showDiff ? computeDiff(originalQuery, updatedQuery) : [];
@@ -305,6 +560,58 @@ export default function KQLDiffViewer() {
           </div>
         ) : (
           <>
+            {(syntaxErrors.original.length > 0 || syntaxErrors.updated.length > 0) && (
+              <div className="mb-6">
+                <h2 className={`text-2xl font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                  Syntax Validation
+                </h2>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {syntaxErrors.original.length > 0 && (
+                    <div className={`rounded-lg p-4 ${darkMode ? 'bg-red-900 bg-opacity-30 border-red-500' : 'bg-red-50 border-red-300'} border-l-4`}>
+                      <h3 className={`font-semibold mb-2 ${darkMode ? 'text-red-300' : 'text-red-800'}`}>
+                        Original Query Issues ({syntaxErrors.original.length})
+                      </h3>
+                      <div className="space-y-2">
+                        {syntaxErrors.original.map((err, idx) => (
+                          <div key={idx} className={`text-sm ${darkMode ? 'text-red-200' : 'text-red-700'}`}>
+                            <span className="font-mono">Line {err.line}:</span> {err.message}
+                            <span className={`ml-2 px-2 py-1 rounded text-xs ${
+                              err.severity === 'error' ? 'bg-red-600 text-white' :
+                              err.severity === 'warning' ? 'bg-yellow-600 text-white' :
+                              'bg-blue-600 text-white'
+                            }`}>
+                              {err.severity}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {syntaxErrors.updated.length > 0 && (
+                    <div className={`rounded-lg p-4 ${darkMode ? 'bg-red-900 bg-opacity-30 border-red-500' : 'bg-red-50 border-red-300'} border-l-4`}>
+                      <h3 className={`font-semibold mb-2 ${darkMode ? 'text-red-300' : 'text-red-800'}`}>
+                        Updated Query Issues ({syntaxErrors.updated.length})
+                      </h3>
+                      <div className="space-y-2">
+                        {syntaxErrors.updated.map((err, idx) => (
+                          <div key={idx} className={`text-sm ${darkMode ? 'text-red-200' : 'text-red-700'}`}>
+                            <span className="font-mono">Line {err.line}:</span> {err.message}
+                            <span className={`ml-2 px-2 py-1 rounded text-xs ${
+                              err.severity === 'error' ? 'bg-red-600 text-white' :
+                              err.severity === 'warning' ? 'bg-yellow-600 text-white' :
+                              'bg-blue-600 text-white'
+                            }`}>
+                              {err.severity}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {aiAnalysis && (
               <div className="mb-6 space-y-4">
                 <h2 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -325,6 +632,23 @@ export default function KQLDiffViewer() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {fpAnalysis && (
+              <div className="mb-6">
+                <h2 className={`text-2xl font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                  False Positive Analysis
+                </h2>
+                <div className={`rounded-lg p-6 ${
+                  darkMode ? 'bg-yellow-900 bg-opacity-30 border-yellow-500' : 'bg-yellow-50 border-yellow-300'
+                } border-l-4`}>
+                  <div className={`prose prose-sm max-w-none ${
+                    darkMode ? 'text-gray-300 prose-invert' : 'text-gray-800'
+                  }`}>
+                    <ReactMarkdown>{fpAnalysis}</ReactMarkdown>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -423,7 +747,7 @@ export default function KQLDiffViewer() {
           </>
         )}
 
-        <div className="mt-6 flex gap-4">
+        <div className="mt-6 flex gap-4 flex-wrap">
           {!showDiff ? (
             <button
               onClick={handleCompare}
@@ -455,6 +779,21 @@ export default function KQLDiffViewer() {
                   {isAnalyzing ? 'Analyzing...' : 'Generate AI Summary'}
                 </button>
               )}
+              {!fpAnalysis && (
+                <button
+                  onClick={generateFPAnalysis}
+                  disabled={isFpAnalyzing}
+                  className="px-6 py-3 bg-yellow-600 text-white rounded-md font-semibold hover:bg-yellow-700 disabled:bg-yellow-300 transition"
+                >
+                  {isFpAnalyzing ? 'Analyzing...' : '🎯 False Positive Check'}
+                </button>
+              )}
+              <button
+                onClick={exportReport}
+                className="px-6 py-3 bg-green-600 text-white rounded-md font-semibold hover:bg-green-700 transition"
+              >
+                📄 Export Report
+              </button>
             </>
           )}
         </div>
