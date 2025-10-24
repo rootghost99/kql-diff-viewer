@@ -7,6 +7,7 @@ export default function KQLDiffViewer() {
   const [showDiff, setShowDiff] = useState(false);
   const [aiAnalysis, setAiAnalysis] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
 
   // Character-level diff for modified lines
   const getCharDiff = (str1, str2) => {
@@ -134,15 +135,24 @@ export default function KQLDiffViewer() {
   };
 
   const getSectionStyle = (type) => {
+    const base = darkMode ? 'bg-gray-800' : '';
     switch (type) {
       case 'warning':
-        return 'bg-yellow-50 border-yellow-300 border-l-4';
+        return darkMode 
+          ? 'bg-yellow-900 bg-opacity-30 border-yellow-500 border-l-4' 
+          : 'bg-yellow-50 border-yellow-300 border-l-4';
       case 'success':
-        return 'bg-green-50 border-green-300 border-l-4';
+        return darkMode 
+          ? 'bg-green-900 bg-opacity-30 border-green-500 border-l-4' 
+          : 'bg-green-50 border-green-300 border-l-4';
       case 'info':
-        return 'bg-blue-50 border-blue-300 border-l-4';
+        return darkMode 
+          ? 'bg-blue-900 bg-opacity-30 border-blue-500 border-l-4' 
+          : 'bg-blue-50 border-blue-300 border-l-4';
       default:
-        return 'bg-gray-50 border-gray-300 border-l-4';
+        return darkMode 
+          ? 'bg-gray-800 border-gray-600 border-l-4' 
+          : 'bg-gray-50 border-gray-300 border-l-4';
     }
   };
 
@@ -210,48 +220,85 @@ export default function KQLDiffViewer() {
   const diff = showDiff ? computeDiff(originalQuery, updatedQuery) : [];
 
   const getLineStyle = (type) => {
-    switch (type) {
-      case 'added':
-        return 'bg-green-100 border-l-4 border-green-500';
-      case 'removed':
-        return 'bg-red-100 border-l-4 border-red-500';
-      case 'modified':
-        return 'bg-yellow-100 border-l-4 border-yellow-500';
-      default:
-        return 'bg-white';
+    if (darkMode) {
+      switch (type) {
+        case 'added':
+          return 'bg-green-900 bg-opacity-30 border-l-4 border-green-500';
+        case 'removed':
+          return 'bg-red-900 bg-opacity-30 border-l-4 border-red-500';
+        case 'modified':
+          return 'bg-yellow-900 bg-opacity-30 border-l-4 border-yellow-500';
+        default:
+          return 'bg-gray-800';
+      }
+    } else {
+      switch (type) {
+        case 'added':
+          return 'bg-green-100 border-l-4 border-green-500';
+        case 'removed':
+          return 'bg-red-100 border-l-4 border-red-500';
+        case 'modified':
+          return 'bg-yellow-100 border-l-4 border-yellow-500';
+        default:
+          return 'bg-white';
+      }
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className={`min-h-screen p-6 ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
       <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">ThreatDefender - KQL Diff App</h1>
-          <p className="text-gray-600">Compare Sentinel Analytic Rule changes</p>
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className={`text-3xl font-bold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+              ThreatDefender - KQL Diff App
+            </h1>
+            <p className={darkMode ? 'text-gray-400' : 'text-gray-600'}>
+              Compare Sentinel Analytic Rule changes
+            </p>
+          </div>
+          <button
+            onClick={() => setDarkMode(!darkMode)}
+            className={`px-4 py-2 rounded-md font-semibold transition ${
+              darkMode 
+                ? 'bg-gray-700 text-yellow-400 hover:bg-gray-600' 
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            {darkMode ? '☀️ Light Mode' : '🌙 Dark Mode'}
+          </button>
         </div>
 
         {!showDiff ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-white rounded-lg shadow p-6">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <div className={`rounded-lg shadow p-6 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+              <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                 Original KQL Query
               </label>
               <textarea
                 value={originalQuery}
                 onChange={(e) => setOriginalQuery(e.target.value)}
-                className="w-full h-96 p-3 border border-gray-300 rounded-md font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className={`w-full h-96 p-3 border rounded-md font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  darkMode 
+                    ? 'bg-gray-900 border-gray-700 text-gray-300' 
+                    : 'bg-white border-gray-300 text-gray-900'
+                }`}
                 placeholder="Paste your original Sentinel Analytic Rule query here..."
               />
             </div>
 
-            <div className="bg-white rounded-lg shadow p-6">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <div className={`rounded-lg shadow p-6 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+              <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                 Updated KQL Query
               </label>
               <textarea
                 value={updatedQuery}
                 onChange={(e) => setUpdatedQuery(e.target.value)}
-                className="w-full h-96 p-3 border border-gray-300 rounded-md font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className={`w-full h-96 p-3 border rounded-md font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  darkMode 
+                    ? 'bg-gray-900 border-gray-700 text-gray-300' 
+                    : 'bg-white border-gray-300 text-gray-900'
+                }`}
                 placeholder="Paste your updated query here..."
               />
             </div>
@@ -260,14 +307,20 @@ export default function KQLDiffViewer() {
           <>
             {aiAnalysis && (
               <div className="mb-6 space-y-4">
-                <h2 className="text-2xl font-bold text-gray-900">AI Analysis</h2>
+                <h2 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                  AI Analysis
+                </h2>
                 {aiAnalysis.map((section, idx) => (
                   <div key={idx} className={`rounded-lg p-6 ${getSectionStyle(section.type)}`}>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <h3 className={`text-lg font-semibold mb-3 flex items-center gap-2 ${
+                      darkMode ? 'text-gray-100' : 'text-gray-900'
+                    }`}>
                       <span>{getSectionIcon(section.type)}</span>
                       {section.title}
                     </h3>
-                    <div className="prose prose-sm max-w-none text-gray-800">
+                    <div className={`prose prose-sm max-w-none ${
+                      darkMode ? 'text-gray-300 prose-invert' : 'text-gray-800'
+                    }`}>
                       <ReactMarkdown>{section.content}</ReactMarkdown>
                     </div>
                   </div>
@@ -275,40 +328,50 @@ export default function KQLDiffViewer() {
               </div>
             )}
 
-            <div className="bg-white rounded-lg shadow overflow-hidden">
-              <div className="p-4 bg-gray-100 border-b border-gray-200">
+            <div className={`rounded-lg shadow overflow-hidden ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+              <div className={`p-4 border-b ${
+                darkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-100 border-gray-200'
+              }`}>
                 <div className="flex items-center gap-4 text-sm">
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 bg-green-100 border-l-4 border-green-500"></div>
-                    <span className="text-gray-700">Added</span>
+                    <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>Added</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 bg-red-100 border-l-4 border-red-500"></div>
-                    <span className="text-gray-700">Removed</span>
+                    <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>Removed</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 bg-yellow-100 border-l-4 border-yellow-500"></div>
-                    <span className="text-gray-700">Modified</span>
+                    <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>Modified</span>
                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 divide-x divide-gray-200">
+              <div className={`grid grid-cols-2 divide-x ${
+                darkMode ? 'divide-gray-700' : 'divide-gray-200'
+              }`}>
                 <div className="p-4">
-                  <h3 className="text-sm font-semibold text-gray-700 mb-3">Original</h3>
+                  <h3 className={`text-sm font-semibold mb-3 ${
+                    darkMode ? 'text-gray-300' : 'text-gray-700'
+                  }`}>Original</h3>
                   <div className="space-y-1">
                     {diff.map((line, idx) => (
                       <div
                         key={idx}
-                        className={`p-2 ${getLineStyle(line.type)} font-mono text-xs whitespace-pre-wrap break-all`}
+                        className={`p-2 ${getLineStyle(line.type)} font-mono text-xs whitespace-pre-wrap break-all ${
+                          darkMode ? 'text-gray-300' : 'text-gray-900'
+                        }`}
                       >
-                        <span className="text-gray-400 mr-3">{line.lineNum}</span>
+                        <span className={`mr-3 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                          {line.lineNum}
+                        </span>
                         {line.type === 'modified' && line.charDiff ? (
                           <span>
                             {line.charDiff.original.map((item, i) => (
                               <span
                                 key={i}
-                                className={item.changed ? 'bg-red-300' : ''}
+                                className={item.changed ? (darkMode ? 'bg-red-500' : 'bg-red-300') : ''}
                               >
                                 {item.char}
                               </span>
@@ -323,20 +386,26 @@ export default function KQLDiffViewer() {
                 </div>
 
                 <div className="p-4">
-                  <h3 className="text-sm font-semibold text-gray-700 mb-3">Updated</h3>
+                  <h3 className={`text-sm font-semibold mb-3 ${
+                    darkMode ? 'text-gray-300' : 'text-gray-700'
+                  }`}>Updated</h3>
                   <div className="space-y-1">
                     {diff.map((line, idx) => (
                       <div
                         key={idx}
-                        className={`p-2 ${getLineStyle(line.type)} font-mono text-xs whitespace-pre-wrap break-all`}
+                        className={`p-2 ${getLineStyle(line.type)} font-mono text-xs whitespace-pre-wrap break-all ${
+                          darkMode ? 'text-gray-300' : 'text-gray-900'
+                        }`}
                       >
-                        <span className="text-gray-400 mr-3">{line.lineNum}</span>
+                        <span className={`mr-3 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                          {line.lineNum}
+                        </span>
                         {line.type === 'modified' && line.charDiff ? (
                           <span>
                             {line.charDiff.updated.map((item, i) => (
                               <span
                                 key={i}
-                                className={item.changed ? 'bg-green-300' : ''}
+                                className={item.changed ? (darkMode ? 'bg-green-500' : 'bg-green-300') : ''}
                               >
                                 {item.char}
                               </span>
