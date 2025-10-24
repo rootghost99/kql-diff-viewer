@@ -1,70 +1,68 @@
-# KQL Diff App
+# KQL Query Diff Viewer
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A web-based tool for comparing Microsoft Sentinel Analytic Rule queries and visualizing changes between versions.
 
-## Available Scripts
+## Live Demo
 
-In the project directory, you can run:
+**[Launch App](https://rootghost99.github.io/kql-diff-viewer)**
 
-### `npm start`
+## Purpose
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+Built for MSSP teams managing Microsoft Sentinel deployments. This tool simplifies the process of reviewing and validating changes to KQL-based analytic rules before deployment.
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## Features
 
-### `npm test`
+- **Side-by-side comparison** of original and updated KQL queries
+- **Line-level highlighting** shows added, removed, and modified lines
+- **Character-level highlighting** pinpoints exact changes within modified lines
+- **Edit mode** allows quick adjustments without starting over
+- **Clean interface** optimized for rapid query reviews
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## Use Cases
 
-### `npm run build`
+- Validate analytic rule updates before deploying to production
+- Review changes submitted by team members
+- Document query modifications for compliance or audit trails
+- Compare rule versions across different Sentinel workspaces
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## How to Use
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+1. Paste your original KQL query in the left panel
+2. Paste the updated query in the right panel
+3. Click "Compare Queries"
+4. Review highlighted differences:
+   - **Green**: Added content
+   - **Red**: Removed content
+   - **Yellow**: Modified lines with character-level highlighting
+5. Use "Back to Edit" to make adjustments or "Start Over" to clear both panels
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## Technology Stack
 
-### `npm run eject`
+- React 18
+- Tailwind CSS
+- Deployed via GitHub Pages
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+## Local Development
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+```bash
+# Clone the repository
+git clone https://github.com/rootghost99/kql-diff-viewer.git
+cd kql-diff-viewer
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+# Install dependencies
+npm install
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+# Run locally
+npm start
 
-## Learn More
+# Build for production
+npm run build
+```
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+## Contributing
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+Built and maintained by Derek MacDonald for the ThreatHunter MSSP team at eGroup Enabling Technologies.
 
-### Code Splitting
+## License
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+MIT
